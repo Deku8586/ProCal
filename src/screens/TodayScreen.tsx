@@ -127,10 +127,27 @@ export function TodayScreen() {
                     meals_array: updatedMeals,
                     goal_met: goalMet,
                 }, { onConflict: 'user_id,date' });
+            } else if (data?.error) {
+                // Surface the actual error from the edge function
+                const details = data.details?.error;
+                const code = details?.code;
+                if (code === 429) {
+                    Alert.alert(
+                        '⚠️ AI Quota Exceeded',
+                        'The Gemini API free tier limit is exhausted.\n\nFix: Go to aistudio.google.com, create a key on a fresh Google account, then update the GEMINI_API_KEY in your Supabase secrets.'
+                    );
+                } else if (code === 403) {
+                    Alert.alert(
+                        '🔑 API Key Invalid',
+                        'The Gemini API key is invalid or was flagged as leaked.\n\nFix: Generate a new key at aistudio.google.com and update it in Supabase → Settings → Edge Functions → Secrets.'
+                    );
+                } else {
+                    Alert.alert('AI Error', details?.message || data.error || 'Could not analyze meal.');
+                }
             }
         } catch (err: any) {
             console.error('Error logging meal:', err);
-            Alert.alert('Error', 'Could not analyze meal. Please try again.');
+            Alert.alert('Error', 'Could not reach the server. Check your connection and try again.');
         } finally {
             setIsLoading(false);
         }

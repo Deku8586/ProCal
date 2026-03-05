@@ -39,23 +39,58 @@ export function OnboardingScreen() {
             if (error) throw error;
 
             const userId = data.user?.id;
-            if (!userId) throw new Error('No user ID returned.');
+            if (!userId) throw new Error('No user ID returned from Supabase.');
 
-            // 2. Save profile to profiles table
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .upsert({
-                    id: userId,
-                    display_name: name.trim(),
-                    weight_kg: parseFloat(weight),
-                    daily_protein_goal: parseInt(proteinGoal),
-                    daily_calorie_goal: parseInt(calorieGoal),
-                });
-            if (profileError) throw profileError;
-
-            // AppNavigator picks up the session automatically via onAuthStateChange
+            // 2. Save profile — only works if we have a live session
+            // (requires email confirmation to be OFF in Supabase dashboard)
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (sessionData.session) {
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .upsert({
+                        id: userId,
+                        display_name: name.trim(),
+                        weight_kg: parseFloat(weight) || 70,
+                        daily_protein_goal: parseInt(proteinGoal) || 150,
+                        daily_calorie_goal: parseInt(calorieGoal) || 2500,
+                    });
+                if (profileError) {
+                    // Profile save failed but auth succeeded
+                    // The user will be prompted to complete profile on next login
+                    console.warn('Profile save failed:', profileError.message);
+                }
+                // AppNavigator picks up session automatically
+            } else {
+                // Email confirmation is ON — inform user
+                Alert.alert(
+                    'Check Your Email ✉️',
+                    'A confirmation link has been sent to ' + email.trim() + '. Please verify your email, then come back and sign in.',
+                    [{ text: 'OK' }]
+                );
+            }
         } catch (e: any) {
-            Alert.alert('Sign Up Failed', e.message || 'Something went wrong. Please try again.');
+            const msg: string = e.message || '';
+            if (msg.toLowerCase().includes('security') || msg.toLowerCase().includes('rate')) {
+                Alert.alert(
+                    'Too Many Attempts',
+                    'This email may already be registered, or you tried too many times. Please try signing in instead, or wait a minute and try again.',
+                    [
+                        { text: 'Sign In', onPress: () => navigation.navigate('SignIn') },
+                        { text: 'Try Again', style: 'cancel' },
+                    ]
+                );
+            } else if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already been registered')) {
+                Alert.alert(
+                    'Account Already Exists',
+                    'An account with this email already exists. Please sign in instead.',
+                    [
+                        { text: 'Sign In', onPress: () => navigation.navigate('SignIn') },
+                        { text: 'Cancel', style: 'cancel' },
+                    ]
+                );
+            } else {
+                Alert.alert('Sign Up Failed', msg || 'Something went wrong. Please try again.');
+            }
         } finally {
             setLoading(false);
         }

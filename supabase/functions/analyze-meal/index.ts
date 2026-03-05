@@ -20,7 +20,7 @@ serve(async (req) => {
             });
         }
 
-        const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') || 'AIzaSyBIW8lx1Mi63Z7E1U9wzOsL3dn1zMOuwbg';
+        const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? 'AIzaSyBHq8z8pmex7aO_nH4iOxhhuYL7ajzjnLw';
 
         if (!GEMINI_API_KEY) {
             throw new Error('Server Configuration Error: Gemini API key missing.');
@@ -40,7 +40,7 @@ serve(async (req) => {
 
         // Note: We use the fetch API directly from Deno to keep the Edge Function lightweight without installing heavy npm SDKs.
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
